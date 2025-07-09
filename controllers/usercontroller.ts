@@ -1,295 +1,439 @@
 import "dotenv/config";
 import express, { Request, Response } from "express";
 import { usermodel } from "../model/user";
-import { sign } from "jsonwebtoken";
+import { JsonWebTokenError, sign } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import sendmail from "../utils/mailer";
-import { SendMailOptions } from "nodemailer";
-import crypto from "crypto"
+
+import crypto from "crypto";
 
 
-const generateToken = (userId: string) => {
+
+const CONSTANTS = {
+  OTP_EXPIRY_HOURS: 2,
+  LOCKOUT_DURATION_MINUTES: 15,
+  MAX_LOGIN_ATTEMPTS: 5,
+  TOKEN_EXPIRY: '1d',
+  SALT_ROUNDS: 12
+};
+
+const ERROR_MESSAGES = {
+  INVALID_CREDENTIALS: 'Invalid email or password',
+  ACCOUNT_LOCKED: 'Account temporarily locked due to too many failed attempts',
+  OTP_EXPIRED: 'OTP has expired or is invalid',
+  MISSING_FIELDS: 'Required fields are missing',
+  EMAIL_IN_USE: 'Email already in use',
+  USER_NOT_FOUND: 'User not found',
+  INVALID_OTP: 'Invalid or expired OTP',
+  INVALID_USER_ID: 'Invalid user ID format'
+};
+
+
+const generateToken = (userId: string): string => {
   const secretKey = process.env.SECRET_KEY as string;
   return sign({ id: userId }, secretKey, { expiresIn: "1d" });
 };
 
-function generate5DigitOTP(): string {
-  const buffer = crypto.randomBytes(3); 
-  const otp = Math.floor(parseInt(buffer.toString('hex'), 16) / 1677.7216) 
-    .toString()
-    .padStart(5, '0');
-  return otp;
-}
+
+const generateOTP = (): string => {
+  return crypto.randomInt(10000, 99999).toString();
+};
 
 
+const hashPassword = async (password: string): Promise<string> => {
+  return await bcrypt.hash(password, CONSTANTS.SALT_ROUNDS);
+};
 
-export const requestAdminOtp = async (req: Request, res: Response) => {
+
+const getOTPExpiryTime = (): Date => {
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + CONSTANTS.OTP_EXPIRY_HOURS);
+  return expiresAt;
+};
+
+
+const createTempOTPHolder = async (name: string, email: string, otp: string) => {
+  const tempOtpHolder = new usermodel({
+    name: `Temp-${name}`,
+    email: `temp-${Date.now()}-${email}`,
+    password: await hashPassword("temporaryPassword" + Math.random()),
+    role: "user",
+    otp: {
+      code: otp,
+      expiresAt: getOTPExpiryTime()
+    }
+  });
+  
+  return await tempOtpHolder.save();
+};
+
+
+const sendOTPEmail = async (email: string, name: string, otp: string, purpose: string) => {
+  const mailOptions = {
+    from: `"BarondeMusical" <${process.env.EMAIL_USER_NAME}>`,
+    to: email,
+    subject: `BarondeMusical - ${purpose}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+        <h2 style="color: #222;">BarondeMusical OTP Verification</h2>
+        <p>Hello ${name},</p>
+        <p>Your one-time password for ${purpose.toLowerCase()} is:</p>
+        <h3 style="background-color: #f0f0f0; padding: 10px; text-align: center; border-radius: 5px;">${otp}</h3>
+        <p>This OTP will expire in ${CONSTANTS.OTP_EXPIRY_HOURS} hours.</p>
+        <p>If you did not request this, please ignore this email.</p>
+        <hr style="margin: 20px 0;" />
+        <small style="color: #888;">This is an automated message from BarondeMusical.</small>
+      </div>
+    `
+  };
+
+  await sendmail(mailOptions);
+};
+
+
+const sendWelcomeEmail = async (email: string, name: string) => {
+  const welcomeMailOptions = {
+    from: `"BarondeMusical" <${process.env.EMAIL_USER_NAME}>`,
+    to: email,
+    subject: "Welcome to BarondeMusical",
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+        <h2 style="color: #222;">Welcome to BarondeMusical</h2>
+        <p>Hi ${name},</p>
+        <p>Thank you for signing up to <strong>BarondeMusical</strong> — your new go-to destination for exclusive Musical assets, collectibles, and unique market experiences.</p>
+        <p>We're thrilled to have you join our growing community. Here's what you can do next:</p>
+        <ul>
+          <li>Explore unique listings and rare finds</li>
+          <li>Manage your collection and profile</li>
+          <li>Stay tuned for upcoming auctions and marketplace updates</li>
+        </ul>
+        <p>If you ever need help, questions, or suggestions — we're just a message away.</p>
+        <p style="margin-top: 30px;">Welcome aboard!</p>
+        <p>The <strong>BarondeMusical</strong> Team</p>
+        <hr style="margin: 40px 0;" />
+        <small style="color: #888;">You received this email because you signed up for an account at BarondeMusical.</small>
+      </div>
+    `
+  };
+
+  await sendmail(welcomeMailOptions);
+};
+
+
+const verifyAndCleanupOTP = async (otpId: string, otp: string) => {
+  const otpRecord = await usermodel.findOne({
+    _id: otpId,
+    "otp.code": otp,
+    "otp.expiresAt": { $gt: new Date() }
+  });
+
+  if (!otpRecord) {
+    return false;
+  }
+
+ 
+  await usermodel.findByIdAndDelete(otpId);
+  return true;
+};
+
+
+export const requestUserOTP = async (req: Request, res: Response) => {
   try {
     const { email, name } = req.body;
 
+    
     if (!email || !name) {
       res.status(400).json({ message: "Name and email are required" });
-      return
+      return;
     }
 
-    const otp = generate5DigitOTP();
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 2);
-    
-    
-    const tempOtpHolder = new usermodel({
-      name: `Temp-${name}`,
-      email: `temp-${Date.now()}-${email}`,
-      password: "temporaryPassword" + Math.random(),
-      role: "user",
-      otp: {
-        code: otp,
-        expiresAt: expiresAt
-      }
-    });
-    
-    await tempOtpHolder.save();
+   
+    const existingUser = await usermodel.findOne({ email });
+    if (existingUser) {
+      res.status(400).json({ message: ERROR_MESSAGES.EMAIL_IN_USE });
+      return;
+    }
 
    
-    
-    const mailOptions = {
-      from: `"BarondeMusical" <${process.env.EMAIL_USER_NAME}>`,
-      to: email,
-      subject: "User Account Creation",
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
-          <h2 style="color: #222;">Ghost Market Admin Verification</h2>
-          <p>Hello ${name},</p>
-          <p><strong>Name:</strong>your one time password is:</p>
-          <h3 style="background-color: #f0f0f0; padding: 10px; text-align: center;">${otp}</h3>
-          <p>This OTP will expire in 2 hours.</p>
-          <p>If you did not authorize this request, please ignore this email.</p>
-        </div>
-      `
-    };
-    
-    await sendmail(mailOptions);
+    const otp = generateOTP();
+    const tempOtpHolder = await createTempOTPHolder(name, email, otp);
 
-    res.status(200).json({ 
-      message: "Admin OTP sent to administrator",
+    
+    await sendOTPEmail(email, name, otp, "User Registration");
+
+    res.status(200).json({
+      message: "OTP has been sent to your email",
       otpId: tempOtpHolder._id
     });
   } catch (error) {
-    console.error("Admin OTP request error:", error);
-    res.status(500).json({ message: "Failed to request admin OTP" });
-  }
-};   
-
-
-export const SignUp = async (req: Request, res: Response) => {
-  const { name, email, password, role, adminOtp, otpId } = req.body;
-
-  try {
-    if (!name || !email || !password) {
-     res.status(400).json({ message: "Name, email and password are required" });
-     return 
-    }
-
-    const existingUser = await usermodel.findOne({ email });
-    if (existingUser) {
-     res.status(400).json({ message: "Email already in use" });
-     return 
-    }
-
-    
-    if (role === "user") {
-      if (!adminOtp || !otpId) {
-       res.status(400).json({ message: "OTP and OTP ID are required for admin registration" });
-       return 
-      }
-
-     
-      const otpRecord = await usermodel.findOne({
-        _id: otpId,
-        "otp.code": adminOtp,
-        "otp.expiresAt": { $gt: new Date() }
-      });
-
-      if (!otpRecord) {
-        res.status(400).json({ message: "Invalid or expired OTP" });
-        return 
-      }
-
-      
-      await usermodel.findByIdAndDelete(otpId);
-    }
-
-    
-    const user = new usermodel({ name, email, password, role });
-    await user.save();
-
-    const token = generateToken(user.id);
-    res.setHeader("Authorization", `Bearer ${token}`);
-
-    
-    const welcomeMailOptions = {
-      from: `"BarondeMusical" <${process.env.EMAIL_USER_NAME}>`,
-      to: user.email,
-      subject: "Welcome to BarondeMusical",
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
-          <h2 style="color: #222;">Welcome to BarondeMusical</h2>
-        <p>Hi ${user.name},</p>
-          <p>Thank you for signing up to <strong>BarondeMusical</strong> — your new go-to destination for exclusive Musical assets, collectibles, and unique market experiences.</p>
-          <p>We're thrilled to have you join our growing community. Here's what you can do next:</p>
-          <ul>
-            <li>Explore unique listings and rare finds</li>
-            <li>Manage your collection and profile</li>
-            <li>Stay tuned for upcoming auctions and marketplace updates</li>
-          </ul>
-          <p>If you ever need help, questions, or suggestions — we're just a message away.</p>
-          <p style="margin-top: 30px;">Welcome aboard!</p>
-          <p>The <strong>BarondeMusical</strong> Team</p>
-          <hr style="margin: 40px 0;" />
-          <small style="color: #888;">You received this email because you signed up for an account at BarondeMusical.</small>
-        </div>
-      `
-    };
-
-    await sendmail(welcomeMailOptions);
-
-     res.status(201).json({
-      message: "Account created successfully",
-      user: { id: user.id, name: user.name, email: user.email, role: user.role }
-    });
-    return
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Unable to create account" });
-    return
+    console.error("OTP request error:", error);
+    res.status(500).json({ message: "Failed to request OTP" });
   }
 };
 
-//irahmancerts@gmail.com
-export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+
+export const signUp = async (req: Request, res: Response) => {
   try {
-    if (!email || !password) {
-      res.status(400).json({ message: "Email and password are required" });
-      return
+    const { name, email, password, role = "user", otp, otpId } = req.body;
+
+    
+    if (!name || !email || !password) {
+      res.status(400).json({ message: "Name, email and password are required" });
+      return;
     }
 
+    
+    const existingUser = await usermodel.findOne({ email });
+    if (existingUser) {
+      res.status(400).json({ message: ERROR_MESSAGES.EMAIL_IN_USE });
+      return;
+    }
+
+   
+    if (role === "user") {
+      if (!otp || !otpId) {
+        res.status(400).json({ message: "OTP and OTP ID are required for user registration" });
+        return;
+      }
+
+      // Verify OTP
+      const isOTPValid = await verifyAndCleanupOTP(otpId, otp);
+      if (!isOTPValid) {
+        res.status(400).json({ message: ERROR_MESSAGES.INVALID_OTP });
+        return;
+      }
+    }
+
+    // Hash password before saving
+    const hashedPassword = await hashPassword(password);
+
+    // Create new user
+    const user = new usermodel({ 
+      name, 
+      email, 
+      password: hashedPassword, 
+      role 
+    });
+    await user.save();
+
+    // Generate token
+    const token = generateToken(user.id);
+    res.setHeader("Authorization", `Bearer ${token}`);
+
+    // Send welcome email
+    await sendWelcomeEmail(user.email, user.name);
+
+    res.status(201).json({
+      message: "Account created successfully",
+      user: { 
+        id: user.id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role 
+      }
+    });
+  } catch (error) {
+    console.error("Signup error:", error);
+    res.status(500).json({ message: "Unable to create account" });
+  }
+};
+
+/**
+ * Request OTP for password reset
+ */
+export const requestPasswordResetOTP = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ message: "Email address is required" });
+      return;
+    }
+
+    // Check if user exists
+    const user = await usermodel.findOne({ email });
+    if (!user) {
+      res.status(400).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
+      return;
+    }
+
+    // Generate OTP and create temp holder
+    const otp = generateOTP();
+    const tempOtpHolder = await createTempOTPHolder(user.name, email, otp);
+
+    // Send OTP email
+    await sendOTPEmail(email, user.name, otp, "Password Reset");
+
+    res.status(200).json({
+      message: "Password reset OTP has been sent to your email",
+      otpId: tempOtpHolder._id
+    });
+  } catch (error) {
+    console.error("Password reset OTP request error:", error);
+    res.status(500).json({ message: "Failed to request password reset OTP" });
+  }
+};
+
+/**
+ * Reset password with OTP verification
+ */
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, otp, otpId, newPassword } = req.body;
+
+    // Validate required fields
+    if (!email || !otp || !otpId || !newPassword) {
+      res.status(400).json({ 
+        message: "Email, OTP, OTP ID, and new password are required" 
+      });
+      return;
+    }
+
+    // Check if user exists
     const user = await usermodel.findOne({ email }).select("+password");
     if (!user) {
-       res.status(400).json({ message: "Invalid email or password" });
-       return
+      res.status(400).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
+      return;
+    }
+
+    
+    const isOTPValid = await verifyAndCleanupOTP(otpId, otp);
+    if (!isOTPValid) {
+      res.status(400).json({ message: ERROR_MESSAGES.INVALID_OTP });
+      return;
+    }
+
+    
+    const hashedPassword = await hashPassword(newPassword);
+    await user.updateOne({ password: hashedPassword });
+
+    res.status(200).json({
+      message: "Password updated successfully"
+    });
+  } catch (error) {
+    console.error("Password reset error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+export const login = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+   
+    if (!email || !password) {
+      res.status(400).json({ message: "Email and password are required" });
+      return;
+    }
+
+  
+    const user = await usermodel.findOne({ email }).select("+password");
+    if (!user) {
+      res.status(400).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+      return;
     }
 
     
     if (user.lockUntil && user.lockUntil > new Date()) {
-      const secs = Math.ceil((user.lockUntil.getTime() - Date.now()) / 1000);
-      const mins = Math.floor(secs / 60);
-      const secRem = secs % 60;
-       res.status(423).json({ message: `Too many attempts. Try again in ${mins}m ${secRem}s.` });
-       return
+      const remainingTime = Math.ceil((user.lockUntil.getTime() - Date.now()) / 1000);
+      const minutes = Math.floor(remainingTime / 60);
+      const seconds = remainingTime % 60;
+      res.status(423).json({ 
+        message: `Account locked. Try again in ${minutes}m ${seconds}s` 
+      });
+      return;
     }
 
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
+    
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       user.loginAttempts++;
-      if (user.loginAttempts >= 5) {
-        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+      if (user.loginAttempts >= CONSTANTS.MAX_LOGIN_ATTEMPTS) {
+        user.lockUntil = new Date(Date.now() + CONSTANTS.LOCKOUT_DURATION_MINUTES * 60 * 1000);
       }
       await user.save();
+      
       res.status(400).json({
-        message: "Invalid email or password",
-        attemptsRemaining: Math.max(0, 5 - user.loginAttempts)
+        message: ERROR_MESSAGES.INVALID_CREDENTIALS
       });
-      return 
+      return;
     }
 
-   
+
     user.loginAttempts = 0;
     user.lockUntil = null;
     await user.save();
-
     const token = generateToken(user.id);
     res.setHeader("Authorization", `Bearer ${token}`);
 
     res.status(200).json({
       status: "success",
       message: "Login successful",
-      user: { id: user.id, email: user.email, role: user.role }
+      user: { 
+        id: user.id, 
+        name: user.name,
+        email: user.email, 
+        role: user.role 
+      }
     });
-    return
   } catch (error) {
     console.error("Login error:", error);
-     res.status(500).json({ message: "Failed to login" });
-     return
+    res.status(500).json({ message: "Failed to login" });
   }
 };
 
 
 export const getUser = async (req: Request, res: Response) => {
-    try {
-        
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        
-        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-            res.status(400).json({ message: "Invalid user ID format" });
-            return;
-        }
-
-        
-        const user = await usermodel.findById(id);
-        if (!user) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        }
-
-        
-        res.status(200).json({
-            status: "success",
-            message: "User retrieved successfully",
-            data: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-               
-            },
-        });
-    } catch (error) {
-        console.error("Error retrieving user:", error);
-
-
-        res.status(500).json({
-            message: "An error occurred while retrieving the user",
-        });
+    
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      res.status(400).json({ message: ERROR_MESSAGES.INVALID_USER_ID });
+      return;
     }
-};
 
-export const allUser = async (req: Request, res: Response) => {
-    try {
-        
-        const users = await usermodel.find();
-        if (!users) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        }
-
-        
-        res.status(200).json({
-            status: "success",
-            message: "all Users retrieved successfully",
-           users,
-        });
-    } catch (error) {
-        console.error("Error retrieving user:", error);
-
-
-        res.status(500).json({
-            message: "An error occurred while retrieving the user",
-        });
+    
+    const user = await usermodel.findById(id);
+    if (!user) {
+      res.status(404).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
+      return;
     }
+
+    res.status(200).json({
+      status: "success",
+      message: "User retrieved successfully",
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error("Error retrieving user:", error);
+    res.status(500).json({
+      message: "An error occurred while retrieving the user"
+    });
+  }
 };
 
 
-
-
-  
+export const getAllUsers = async (req: Request, res: Response) => {
+  try {
+    const users = await usermodel.find().select('-password -otp -loginAttempts -lockUntil');
+    
+    res.status(200).json({
+      status: "success",
+      message: "All users retrieved successfully",
+      count: users.length,
+      users
+    });
+  } catch (error) {
+    console.error("Error retrieving users:", error);
+    res.status(500).json({
+      message: "An error occurred while retrieving users"
+    });
+  }
+};
