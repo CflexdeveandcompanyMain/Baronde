@@ -10,7 +10,7 @@ const transport = createTransport({
   auth: {
     user: process.env.EMAIL_USER_NAME,
     pass: process.env.EMAIL_PASS,
-  },
+  }, 
 });
 
 const sendmail = async (mailoption: SendMailOptions) => {

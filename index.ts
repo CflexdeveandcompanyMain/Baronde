@@ -3,10 +3,14 @@ import connectDB from "./db";
 import express, { Application } from "express";
 import { createServer } from "http";
 import userroute from "./routes/userroute"
+import imageroute from "./routes/imageroute"
 const PORT = process.env.PORT || 3000;
 const app: Application = express();
 const httpServer = createServer(app);
 app.use(express.json());
+
+app.use('/user/v1', userroute);
+app.use('/image/v1', imageroute);
 
 app.use('/', (req, res) => {
   res.status(200).json({
@@ -14,7 +18,7 @@ app.use('/', (req, res) => {
   });
 });
 
-app.use('/user/v1', userroute);
+
 
 connectDB()
   .then(() => {
