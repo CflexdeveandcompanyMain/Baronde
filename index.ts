@@ -11,27 +11,33 @@ const httpServer = createServer(app);
 app.use(express.json());
 
 
-const whitelist = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:5173',
-  "*"
+// const whitelist = [
+//   'http://localhost:3000',
+//   'http://localhost:3001',
+//   'http://localhost:5173',
+//   "*"
   
-];
+// ];
 
-const corsOptions = {
-  origin: function(origin: any, callback: any) {
-    if (!origin || whitelist.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+// const corsOptions = {
+//   origin: function(origin: any, callback: any) {
+//     if (!origin || whitelist.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error('Not allowed by CORS'));
+//     }
+//   },
+//   credentials: true,
+//   exposedHeaders: ['Authorization']
+// };
+
+app.use(cors({
+  origin: "*",
   credentials: true,
   exposedHeaders: ['Authorization']
-};
+}));
 
-app.use(cors(corsOptions));
+
 
 
 app.use('/user/v1', userroute);
