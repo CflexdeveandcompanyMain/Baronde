@@ -5,6 +5,7 @@ interface IImage {
   url: string;
   name: string;
   description: string;
+  categories: string,
   spec: string
   price: number | { currency: string; value: number };
 }
@@ -14,6 +15,7 @@ const imageSchema = new Schema<IImage>({
   url: { type: String, required: true },
   name: { type: String, required: true },
   description: { type: String, required: true },
+  categories: {type: String},
   spec: { type: String },
   price: { type: Number},
 });

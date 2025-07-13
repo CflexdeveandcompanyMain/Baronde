@@ -6,7 +6,7 @@ import cloudinary from '../utils/cloudinary';
 export const uploadImage = async (req: Request, res: Response) => {
   try {
   
-    const {name, specs, description, price} = req.body
+    const {name, specs, description, price, categories} = req.body
 
 
     if (!req.file || !name || !description) {
@@ -28,6 +28,7 @@ export const uploadImage = async (req: Request, res: Response) => {
           name: name,
           spec: specs,
           description: description,
+          categories: categories,
           price: price
         });
 
@@ -44,6 +45,10 @@ export const uploadImage = async (req: Request, res: Response) => {
 export const getImages = async (req: Request, res: Response) => {
   try {
     const images = await Image.find();
+    if(!images || images.length === 0) {
+      res.status(404).json({message: "No image as been uploaded yet"})
+      return
+    }
     res.status(200).json(images);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
@@ -52,7 +57,7 @@ export const getImages = async (req: Request, res: Response) => {
 
 export const getImagesByName = async (req: Request, res: Response) => {
   try {
-    const {name} = req.body
+    const {name} = req.params
     const FindImage = await Image.find({name})
     if (!FindImage) {
       res.status(404).json({message: "no image found"}) 
@@ -66,5 +71,29 @@ res.status(200).json({
   } catch(error) {
     console.error(error)
     res.status(500).json({message: "an error occured"})
+  }
+}
+
+
+export const getCategories = async (req: Request, res: Response) => {
+  try {
+    const {categories} = req.params
+    const data = await Image.find({categories})
+    if(!data || data.length === 0){
+      res.status(404).json({
+        status: "Not found",
+        message: "No results"
+      })
+      return
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "fetched results succesfully",
+      data: data 
+    })
+  } catch (error) {
+    console.error(error)
+     res.status(500).json({message: "internal server error"})
   }
 }
