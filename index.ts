@@ -5,6 +5,7 @@ import { createServer } from "http";
 import cors from "cors"
 import userroute from "./routes/userroute"
 import imageroute from "./routes/imageroute"
+import { deleteAllUsers } from "./controllers/usercontroller";
 const PORT = process.env.PORT || 3000;
 const app: Application = express();
 const httpServer = createServer(app);

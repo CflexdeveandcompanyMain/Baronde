@@ -13,7 +13,6 @@ const CONSTANTS = {
   OTP_EXPIRY_HOURS: 2,
   LOCKOUT_DURATION_MINUTES: 15,
   MAX_LOGIN_ATTEMPTS: 5,
-  SALT_ROUNDS: 12
 };
 
 const ERROR_MESSAGES = {
@@ -39,9 +38,6 @@ const generateOTP = (): string => {
 };
 
 
-const hashPassword = async (password: string): Promise<string> => {
-  return await bcrypt.hash(password, CONSTANTS.SALT_ROUNDS);
-};
 
 
 const getOTPExpiryTime = (): Date => {
@@ -55,7 +51,7 @@ const createTempOTPHolder = async (name: string, email: string, otp: string) => 
   const tempOtpHolder = new usermodel({
     name: `Temp-${name}`,
     email: `temp-${Date.now()}-${email}`,
-    password: await hashPassword("temporaryPassword" + Math.random()),
+    password: "temporaryPassword" + Math.random(),
     role: "user",
     otp: {
       code: otp,
@@ -203,14 +199,13 @@ export const signUp = async (req: Request, res: Response) => {
       }
     }
 
-    // Hash password before saving
-    const hashedPassword = await hashPassword(password);
+    
 
     // Create new user
     const user = new usermodel({ 
       name, 
       email, 
-      password: hashedPassword, 
+      password, 
       role 
     });
     await user.save();
@@ -303,8 +298,8 @@ export const resetPassword = async (req: Request, res: Response) => {
     }
 
     
-    const hashedPassword = await hashPassword(newPassword);
-    await user.updateOne({ password: hashedPassword });
+  
+    await user.updateOne({ password: newPassword});
 
     res.status(200).json({
       message: "Password updated successfully"
@@ -434,5 +429,17 @@ export const getAllUsers = async (req: Request, res: Response) => {
     res.status(500).json({
       message: "An error occurred while retrieving users"
     });
+  }
+};
+
+export const deleteAllUsers = async () => {
+  try {
+    
+    const result = await usermodel.deleteMany({});
+    
+   console.log("deleted")
+  } catch (error) {
+    console.error("Error deleting all users:", error);
+   
   }
 };
