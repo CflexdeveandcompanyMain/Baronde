@@ -4,7 +4,7 @@ import cloudinary from '../utils/cloudinary';
 
 export const uploadImage = async (req: Request, res: Response) => {
   try {
-    const { name, specs, description, price, categories } = req.body;
+    const { name, specs, description, price, categories, keyword } = req.body;
 
     if (!req.files || !Array.isArray(req.files) || req.files.length === 0 || !name || !description) {
       res.status(400).json({ 
@@ -48,7 +48,8 @@ export const uploadImage = async (req: Request, res: Response) => {
       spec: specs,
       description: description,
       categories: categories,
-      price: price
+      price: price,
+      keyword: keyword
     });
 
     await newImage.save();
@@ -165,5 +166,24 @@ export const getImageById = async (req: Request, res: Response) => {
       message: 'Server error', 
       error: error instanceof Error ? error.message : 'Unknown error' 
     });
+  }
+};
+
+export const getImagesByKeyword = async (req: Request, res: Response) => {
+  try {
+    const { keyword } = req.params;
+    const images = await Image.find({ keyword: { $in: [keyword] } });
+    if (!images || images.length === 0) {
+      res.status(404).json({ message: "No images found with that keyword" });
+      return;
+    }
+    res.status(200).json({
+      status: 'success',
+      message: 'Images fetched successfully',
+      count: images.length,
+      data: images
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
   }
 };

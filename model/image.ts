@@ -12,6 +12,7 @@ interface IImage {
   categories: string;
   spec: string;
   price: number;
+  keyword: string[];
   stockQuantity?: number;
   discount?: number;
   createdAt?: Date;
@@ -39,6 +40,7 @@ const imageSchema = new Schema<IImage>({
   categories: { type: String, required: true },
   spec: { type: String },
   price: { type: Number, required: true },
+  keyword: {type: [String]},
   stockQuantity: { type: Number, default: 1 },
   discount: { type: Number, default: 0 }
 }, {

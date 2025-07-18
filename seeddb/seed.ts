@@ -1,6 +1,8 @@
 import Image from '../model/image'; 
 import { HeroData } from '../heroData'; 
 import mongoose from 'mongoose';
+import "dotenv/config";
+
 
 
 const transformHeroDataToImageData = (heroItem: any) => {
@@ -57,7 +59,8 @@ export const seedDatabase = async () => {
 
 async function runSeed() {
   try {
-    await mongoose.connect('mongodb+srv://timosdev99:timo1234567890@cluster0.59vvtcc.mongodb.net/');
+    console.log("Connecting to MongoDB with URI:", process.env.MONGO_DB_URI);
+    await mongoose.connect(process.env.MONGO_DB_URI as string);
     await seedDatabase();
     process.exit(0);
   } catch (error) {
