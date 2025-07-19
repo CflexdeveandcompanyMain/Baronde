@@ -7,18 +7,32 @@ export const uploadImage = async (req: Request, res: Response) => {
     const { name, brand, specs, description, price, categories, keyword, image } = req.body;
 
     if (!image || !name || !description || !price || !categories) {
-     res.status(400).json({
-        message: 'Input compulsory fields: image, name, description, price and categories'
+      res.status(400).json({
+        message: 'Input compulsory fields: at least one image, name, description, price and categories'
       });
-       return 
+       return
     }
 
-    const result = await cloudinary.uploader.upload(image, {
-      folder: 'products'
+    const images = Array.isArray(image) ? image : [image];
+
+    if (images.length > 4) {
+       res.status(400).json({ 
+        message: 'Maximum 4 images allowed per product' 
+      });
+      return
+
+    }
+
+    const imageUploadPromises = images.map((base64Image: string) => {
+      return cloudinary.uploader.upload(base64Image, {
+        folder: 'products'
+      });
     });
 
+    const uploadResults = await Promise.all(imageUploadPromises);
+
     const newImage = new Image({
-      images: [{ public_id: result.public_id, url: result.secure_url }],
+      images: uploadResults.map(result => ({ public_id: result.public_id, url: result.secure_url })),
       brand: brand,
       name: name,
       spec: specs,
