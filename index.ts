@@ -9,7 +9,7 @@ import { deleteAllUsers } from "./controllers/usercontroller";
 const PORT = process.env.PORT || 3000;
 const app: Application = express();
 const httpServer = createServer(app);
-app.use(express.json());
+app.use(express.json({limit: '500mb'}));
 
 
 // const whitelist = [
