@@ -220,7 +220,8 @@ export const updateImage = async (req: Request, res: Response) => {
     let imageToUpdate = await Image.findById(id);
 
     if (!imageToUpdate) {
-      return res.status(404).json({ message: 'Image not found' });
+       res.status(404).json({ message: 'Image not found' });
+       return
     }
 
     if (image && Array.isArray(image) && image.length > 0) {
