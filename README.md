@@ -90,6 +90,12 @@ Retrieves a list of all users.
 
 **Requires Admin Authentication.**
 
+### `DELETE /api/users/all`
+
+Deletes all users from the database.
+
+**Requires Admin Authentication.**
+
 ## Image Endpoints
 
 These endpoints are related to managing images (products).
@@ -165,3 +171,103 @@ Updates an image's data.
 Deletes an image by its ID.
 
 **Requires Authentication.**
+
+## Cart Endpoints
+
+These endpoints are related to managing the user's shopping cart.
+
+### `POST /api/cart/`
+
+Adds an item to the user's cart or updates the quantity if the item already exists.
+
+**Requires Authentication.**
+
+**Request Body:**
+
+```json
+{
+  "productId": "<product_id>",
+  "quantity": 1
+}
+```
+
+### `GET /api/cart/`
+
+Retrieves the current user's shopping cart.
+
+**Requires Authentication.**
+
+### `PUT /api/cart/item/:productId`
+
+Updates the quantity of a specific item in the user's cart.
+
+**Requires Authentication.**
+
+**Request Body:**
+
+```json
+{
+  "quantity": 2
+}
+```
+
+### `DELETE /api/cart/item/:productId`
+
+Removes a specific item from the user's cart.
+
+**Requires Authentication.**
+
+### `DELETE /api/cart/`
+
+Clears all items from the user's cart.
+
+**Requires Authentication.**
+
+## Order Endpoints
+
+These endpoints are related to managing user orders.
+
+### `POST /api/order/checkout`
+
+Initiates the checkout process, creates a pending order, and prepares for payment.
+
+**Requires Authentication.**
+
+**Request Body:**
+
+```json
+{
+  "shippingAddress": {
+    "street": "123 Main St",
+    "city": "Anytown",
+    "zipCode": "12345",
+    "country": "USA"
+  }
+}
+```
+
+### `GET /api/order/`
+
+Retrieves a list of all orders for the authenticated user.
+
+**Requires Authentication.**
+
+### `GET /api/order/:id`
+
+Retrieves the details of a specific order by its ID.
+
+**Requires Authentication.**
+
+### `PUT /api/order/:id/status`
+
+Updates the status of a specific order. This endpoint is typically for administrative use.
+
+**Requires Admin Authentication.**
+
+**Request Body:**
+
+```json
+{
+  "orderStatus": "shipped" // e.g., 'paid', 'shipped', 'delivered', 'cancelled'
+}
+```

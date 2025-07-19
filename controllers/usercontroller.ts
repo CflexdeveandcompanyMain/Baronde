@@ -431,15 +431,3 @@ export const getAllUsers = async (req: Request, res: Response) => {
     });
   }
 };
-
-export const deleteAllUsers = async () => {
-  try {
-    
-    const result = await usermodel.deleteMany({});
-    
-   console.log("deleted")
-  } catch (error) {
-    console.error("Error deleting all users:", error);
-   
-  }
-};

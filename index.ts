@@ -5,7 +5,8 @@ import { createServer } from "http";
 import cors from "cors"
 import userroute from "./routes/userroute"
 import imageroute from "./routes/imageroute"
-import { deleteAllUsers } from "./controllers/usercontroller";
+import cartroute from "./routes/cartroute"
+import orderroute from "./routes/orderroute"
 const PORT = process.env.PORT || 3000;
 const app: Application = express();
 const httpServer = createServer(app);
@@ -43,6 +44,8 @@ app.use(cors({
 
 app.use('/user/v1', userroute);
 app.use('/image/v1', imageroute);
+app.use('/cart/v1', cartroute);
+app.use('/order/v1', orderroute);
 
 app.use('/', (req, res) => {
   res.status(200).json({

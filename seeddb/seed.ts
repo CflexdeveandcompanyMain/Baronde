@@ -17,7 +17,9 @@ const transformHeroDataToImageData = (heroItem: any) => {
     spec: heroItem.description,
     price: heroItem.price,
     stockQuantity: heroItem.stockQuantity || 1,
-    discount: heroItem.discount || 0
+    discount: heroItem.discount || 0,
+    keyword: heroItem.keyword,
+    brand: heroItem.brand
   };
 };
 
