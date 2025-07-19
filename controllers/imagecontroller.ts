@@ -6,7 +6,7 @@ export const uploadImage = async (req: Request, res: Response) => {
   try {
     const { name, brand, specs, description, price, categories, keyword, image } = req.body;
 
-    if (!image || !name || !description || !price || !categories) {
+        if (!image || (Array.isArray(image) && image.length === 0) || !name || !description || !price || !categories) {
       res.status(400).json({
         message: 'Input compulsory fields: at least one image, name, description, price and categories'
       });
