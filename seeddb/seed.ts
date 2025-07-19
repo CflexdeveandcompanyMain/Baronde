@@ -7,13 +7,13 @@ import "dotenv/config";
 
 const transformHeroDataToImageData = (heroItem: any) => {
   return {
-    images: heroItem.image.map((imageUrl: string) => ({
+    images: heroItem.images.map((img: { url: string }) => ({
       public_id: `seeded_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      url: imageUrl
+      url: img.url
     })),
     name: heroItem.name,
     description: heroItem.description,
-    categories: heroItem.category,
+    categories: heroItem.categories,
     spec: heroItem.description,
     price: heroItem.price,
     stockQuantity: heroItem.stockQuantity || 1,

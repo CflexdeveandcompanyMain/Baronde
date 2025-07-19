@@ -263,3 +263,34 @@ export const updateImage = async (req: Request, res: Response) => {
     });
   }
 };
+
+// export const deleteAllImages = async (req: Request, res: Response) => {
+//   try {
+//     const images = await Image.find();
+
+//     if (!images || images.length === 0) {
+//       res.status(404).json({ message: "No images found to delete." });
+//       return;
+//     }
+
+//     const publicIds = images.flatMap(image => image.images.map(img => img.public_id));
+
+//     if (publicIds.length > 0) {
+//       await cloudinary.api.delete_resources(publicIds);
+//     }
+
+//     await Image.deleteMany({});
+
+//     res.status(200).json({
+//       status: 'success',
+//       message: 'All images have been deleted successfully.'
+//     });
+
+//   } catch (error) {
+//     console.error('Delete All Images error:', error);
+//     res.status(500).json({
+//       message: 'Server error while deleting all images',
+//       error: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// };
