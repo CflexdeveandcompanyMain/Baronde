@@ -4,53 +4,28 @@ import cloudinary from '../utils/cloudinary';
 
 export const uploadImage = async (req: Request, res: Response) => {
   try {
-    const { name, brand, specs, description, price, categories, keyword } = req.body;
+    const { name, brand, specs, description, price, categories, keyword, image } = req.body;
 
-    if (!req.files || !Array.isArray(req.files) || req.files.length === 0 || !name || !description) {
-      res.status(400).json({
-        message: 'Input compulsory fields: at least one image, name and description'
+    if (!image || !name || !description || !price || !categories) {
+     res.status(400).json({
+        message: 'Input compulsory fields: image, name, description, price and categories'
       });
-         return 
-    }
-    if (req.files.length > 4) {
-      res.status(400).json({ 
-        message: 'Maximum 4 images allowed per product' 
-      });
-      return;
+       return 
     }
 
-    const imageUploadPromises = req.files.map((file: Express.Multer.File) => {
-      return new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
-          { 
-            resource_type: 'auto',
-            folder: 'products'
-          },
-          (error, result) => {
-            if (error || !result) {
-              reject(error);
-            } else {
-              resolve({
-                public_id: result.public_id,
-                url: result.secure_url
-              });
-            }
-          }
-        ).end(file.buffer);
-      });
+    const result = await cloudinary.uploader.upload(image, {
+      folder: 'products'
     });
 
-    const uploadResults = await Promise.all(imageUploadPromises);
-
     const newImage = new Image({
-      images: uploadResults,
+      images: [{ public_id: result.public_id, url: result.secure_url }],
       brand: brand,
       name: name,
       spec: specs,
       description: description,
       categories: categories,
       price: price,
-      keyword: keyword
+      keyword: Array.isArray(keyword) ? keyword : [keyword]
     });
 
     await newImage.save();

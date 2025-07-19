@@ -5,7 +5,7 @@ import upload from '../utils/multer';
 
 const router = Router();
 
-router.post('/upload', authToken, upload.array('images', 4), uploadImage);
+router.post('/upload', authToken, uploadImage);
 router.get('/', authToken, getImages);
 router.get("/name/:name", authToken, getImagesByName);
 router.get("/categories/:categories", authToken, getCategories);
