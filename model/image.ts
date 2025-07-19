@@ -8,6 +8,7 @@ interface IImageData {
 interface IImage {
   images: IImageData[];
   name: string;
+  brand: string;
   description: string;
   categories: string;
   spec: string;
@@ -36,6 +37,7 @@ const imageSchema = new Schema<IImage>({
     }
   },
   name: { type: String, required: true },
+  brand: {type: String},
   description: { type: String, required: true },
   categories: { type: String, required: true },
   spec: { type: String },

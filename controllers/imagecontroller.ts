@@ -4,13 +4,13 @@ import cloudinary from '../utils/cloudinary';
 
 export const uploadImage = async (req: Request, res: Response) => {
   try {
-    const { name, specs, description, price, categories, keyword } = req.body;
+    const { name, brand, specs, description, price, categories, keyword } = req.body;
 
-    if (!name || !description) {
-      res.status(400).json({ 
-        message: 'Input compulsory fields: at least one image, name and description' 
+    if (!req.files || !Array.isArray(req.files) || req.files.length === 0 || !name || !description) {
+      res.status(400).json({
+        message: 'Input compulsory fields: at least one image, name and description'
       });
-      return;
+         return 
     }
     if (req.files.length > 4) {
       res.status(400).json({ 
@@ -44,6 +44,7 @@ export const uploadImage = async (req: Request, res: Response) => {
 
     const newImage = new Image({
       images: uploadResults,
+      brand: brand,
       name: name,
       spec: specs,
       description: description,
