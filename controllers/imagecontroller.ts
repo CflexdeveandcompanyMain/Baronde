@@ -177,3 +177,88 @@ export const getImagesByKeyword = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error', error });
   }
 };
+
+export const deleteImage = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const image = await Image.findById(id);
+
+    if (!image) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Image not found'
+      });
+      return;
+    }
+
+    // Delete image from cloudinary
+    const publicIds = image.images.map(img => img.public_id);
+    if(publicIds.length > 0){
+      await cloudinary.api.delete_resources(publicIds);
+    }
+    
+    await Image.findByIdAndDelete(id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Image deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete error:', error);
+    res.status(500).json({
+      message: 'Server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+export const updateImage = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, brand, specs, description, price, categories, keyword, image } = req.body;
+
+    let imageToUpdate = await Image.findById(id);
+
+    if (!imageToUpdate) {
+      return res.status(404).json({ message: 'Image not found' });
+    }
+
+    if (image && Array.isArray(image) && image.length > 0) {
+      const publicIds = imageToUpdate.images.map(img => img.public_id);
+      if (publicIds.length > 0) {
+        await cloudinary.api.delete_resources(publicIds);
+      }
+
+      const imageUploadPromises = image.map((base64Image: string) => {
+        return cloudinary.uploader.upload(base64Image, {
+          folder: 'products'
+        });
+      });
+      const uploadResults = await Promise.all(imageUploadPromises);
+      imageToUpdate.images = uploadResults.map(result => ({ public_id: result.public_id, url: result.secure_url }));
+    }
+
+    if (name) imageToUpdate.name = name;
+    if (brand) imageToUpdate.brand = brand;
+    if (specs) imageToUpdate.spec = specs;
+    if (description) imageToUpdate.description = description;
+    if (price) imageToUpdate.price = price;
+    if (categories) imageToUpdate.categories = categories;
+    if (keyword) imageToUpdate.keyword = Array.isArray(keyword) ? keyword : [keyword];
+
+    const updatedImage = await imageToUpdate.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Product updated successfully',
+      data: updatedImage
+    });
+
+  } catch (error) {
+    console.error('Update error:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+};

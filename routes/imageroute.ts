@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { uploadImage, getImages, getImagesByName, getCategories, getImageById, getImagesByKeyword } from '../controllers/imagecontroller';
+import { uploadImage, getImages, getImagesByName, getCategories, getImageById, getImagesByKeyword, deleteImage, updateImage } from '../controllers/imagecontroller';
 import { authToken } from '../middleware/authtoken';
 import upload from '../utils/multer';
 
@@ -11,5 +11,7 @@ router.get("/name/:name", authToken, getImagesByName);
 router.get("/categories/:categories", authToken, getCategories);
 router.get("/keyword/:keyword", authToken, getImagesByKeyword)
 router.get("/product/:id", authToken, getImageById);
+router.delete("/product/:id", authToken, deleteImage);
+router.put("/product/:id", authToken, updateImage);
 
 export default router;
