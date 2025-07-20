@@ -62,7 +62,7 @@ export const initiateCheckout = async (req: Request, res: Response) => {
       status: 'success',
       message: 'Checkout initiated. Complete payment to confirm order.',
       data: newOrder,
-      // clientSecret: paymentIntent.client_secret, // Uncomment for Stripe integration
+      // clientSecret: paymentIntent.client_secret
     });
 
   } catch (error) {
