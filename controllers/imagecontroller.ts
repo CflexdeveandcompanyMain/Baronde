@@ -215,7 +215,7 @@ export const deleteImage = async (req: Request, res: Response) => {
 export const updateImage = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, brand, specs, description, price, categories, keyword, image } = req.body;
+    const { name, brand, specs, description, price, categories, keyword, discount, image } = req.body;
 
     let imageToUpdate = await Image.findById(id);
 
@@ -244,6 +244,7 @@ export const updateImage = async (req: Request, res: Response) => {
     if (specs) imageToUpdate.spec = specs;
     if (description) imageToUpdate.description = description;
     if (price) imageToUpdate.price = price;
+    if(discount) imageToUpdate.discount = discount;
     if (categories) imageToUpdate.categories = categories;
     if (keyword) imageToUpdate.keyword = Array.isArray(keyword) ? keyword : [keyword];
 
