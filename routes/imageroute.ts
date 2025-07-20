@@ -8,7 +8,7 @@ const router = Router();
 
 router.post('/upload', authToken, uploadImage);
 router.get('/',  getImages);
-router.get("/name/:name", getImagesByName);
+router.get("/name/:name",  getImagesByName);
 router.get("/categories/:categories", getCategories);
 router.get("/keyword/:keyword", getImagesByKeyword)
 router.get("/product/:id",  getImageById);
