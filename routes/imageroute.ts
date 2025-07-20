@@ -7,11 +7,11 @@ import upload from '../utils/multer';
 const router = Router();
 
 router.post('/upload', authToken, uploadImage);
-router.get('/', authToken, getImages);
-router.get("/name/:name", authToken, getImagesByName);
-router.get("/categories/:categories", authToken, getCategories);
-router.get("/keyword/:keyword", authToken, getImagesByKeyword)
-router.get("/product/:id", authToken, getImageById);
+router.get('/',  getImages);
+router.get("/name/:name", getImagesByName);
+router.get("/categories/:categories", getCategories);
+router.get("/keyword/:keyword", getImagesByKeyword)
+router.get("/product/:id",  getImageById);
 router.delete("/product/:id", authToken, deleteImage);
 router.put("/product/:id", authToken, updateImage);
 
