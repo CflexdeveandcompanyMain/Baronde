@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { initiateCheckout, getOrders, getOrderById, updateOrderStatus } from '../controllers/ordercontroller';
+import { initiateCheckout, getOrders, getOrderById, updateOrderStatus, verifyPayment } from '../controllers/ordercontroller';
 import { authToken } from '../middleware/authtoken';
 import { Admin } from '../middleware/rbac';
 
@@ -23,6 +23,7 @@ const router = Router();
  *         description: Checkout initiated
  */
 router.post('/checkout', authToken, initiateCheckout);
+router.get('/verify-payment', verifyPayment);
 
 /**
  * @swagger

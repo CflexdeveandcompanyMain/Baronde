@@ -1,12 +1,20 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
 interface IOrderItem {
-  product: object; // A snapshot of the product data
+  product: Types.ObjectId; // Reference to the Product model
   quantity: number;
   price: number; // Price at the time of purchase
 }
 
-interface IOrder extends Document {
+// Interface for the structure of payment details from Paystack
+interface IPaymentDetails {
+  reference?: string;
+  status?: string;
+  gatewayResponse?: string;
+}
+
+export interface IOrder extends Document {
+  _id: Types.ObjectId; // Explicitly type the _id
   user: Types.ObjectId;
   items: IOrderItem[];
   totalAmount: number;
@@ -17,17 +25,15 @@ interface IOrder extends Document {
     country: string;
   };
   orderStatus: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
-  paymentDetails: {
-    paymentId: string;
-    paymentMethod: string;
-  };
+  paymentDetails?: IPaymentDetails; 
   createdAt: Date;
+  updatedAt: Date;
 }
 
-const OrderSchema = new Schema({
+const OrderSchema = new Schema<IOrder>({
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   items: [{
-    product: { type: Object, required: true },
+    product: { type: Schema.Types.ObjectId, ref: 'Image', required: true },
     quantity: { type: Number, required: true },
     price: { type: Number, required: true },
   }],
@@ -44,8 +50,9 @@ const OrderSchema = new Schema({
     default: 'pending',
   },
   paymentDetails: {
-    paymentId: { type: String },
-    paymentMethod: { type: String, default: 'Stripe' }, // Or another provider
+    reference: { type: String },
+    status: { type: String },
+    gatewayResponse: { type: String },
   },
 }, { timestamps: true });
 
