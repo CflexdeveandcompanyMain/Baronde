@@ -1,6 +1,6 @@
 import "dotenv/config";
 import connectDB from "./db";
-import express, { Application } from "express";
+import express, { Application, NextFunction, Request, Response } from "express";
 import { createServer } from "http";
 import cors from "cors"
 import userroute from "./routes/userroute"
@@ -47,10 +47,12 @@ app.use('/image/v1', imageroute);
 app.use('/cart/v1', cartroute);
 app.use('/order/v1', orderroute);
 
-app.use('/', (req, res) => {
-  res.status(200).json({
-    message: "API is working"
-  });
+app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path !== '/') {
+        res.status(404).json({ message: 'Route Not Found' });
+        return; 
+    }
+    next(); 
 });
 
 
