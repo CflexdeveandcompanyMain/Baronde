@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { getUsersWithOrders, getTotalRevenue, getTotalOrders } from '../controllers/orderanalyticcontroller';
-import { authtoken } from '../middleware/authtoken';
-import { admin } from '../middleware/rbac';
+import { authToken } from '../middleware/authtoken.ts'
+import {Admin} from '../middleware/rbac.ts'
 
 const router = Router();
 
-router.get('/v1/users-orders', authtoken, admin, getUsersWithOrders);
-router.get('/v1/total-revenue', authtoken, admin, getTotalRevenue);
-router.get('/v1/total-orders', authtoken, admin , getTotalOrders);
+router.get('/v1/users-orders', authToken, Admin, getUsersWithOrders);
+router.get('/v1/total-revenue', authToken, Admin, getTotalRevenue);
+router.get('/v1/total-orders', authToken, Admin, getTotalOrders);
 
 export default router;
