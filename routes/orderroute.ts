@@ -23,7 +23,7 @@ const router = Router();
  *         description: Checkout initiated
  */
 router.post('/checkout', authToken, initiateCheckout);
-router.get('/verify-payment', verifyPayment);
+router.get('/verify-payment', authToken, verifyPayment);
 
 /**
  * @swagger
