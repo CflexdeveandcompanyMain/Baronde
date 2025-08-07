@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getUsersWithOrders, getTotalRevenue, getTotalOrders } from '../controllers/orderanalyticcontroller';
-import { authToken } from '../middleware/authtoken.ts'
-import {Admin} from '../middleware/rbac.ts'
+import { authToken } from '../middleware/authtoken'
+import {Admin} from '../middleware/rbac'
 
 const router = Router();
 
