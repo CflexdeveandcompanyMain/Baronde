@@ -1,11 +1,26 @@
 import { Request, Response } from 'express';
 import Order from '../model/order';
-import { usermodel } from '../model/user';
+import { usermodel as User } from '../model/user';
 import { IAuthRequest } from '../interface/types';
 
-export const getUsersWithOrders = async (req: IAuthRequest, res: Response) => {
+export const getOrderAnalytics = async (req: IAuthRequest, res: Response) => {
   try {
-    const users = await usermodel.find().select('-password -otp -loginAttempts -lockUntil');
+    const [
+      users,
+      totalRevenueResult,
+      totalOrders,
+      successfulPayments,
+      pendingPayments,
+    ] = await Promise.all([
+      User.find().select('-password -otp -loginAttempts -lockUntil'),
+      Order.aggregate([
+        { $match: { orderStatus: 'paid' } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      ]),
+      Order.countDocuments(),
+      Order.countDocuments({ orderStatus: 'paid' }),
+      Order.countDocuments({ orderStatus: 'pending' }),
+    ]);
 
     const usersWithOrders = await Promise.all(
       users.map(async (user) => {
@@ -17,46 +32,21 @@ export const getUsersWithOrders = async (req: IAuthRequest, res: Response) => {
       })
     );
 
-    res.status(200).json({
-      status: 'success',
-      message: 'Users and their orders fetched successfully',
-      data: usersWithOrders,
-    });
-  } catch (error) {
-    console.error('Get users with orders error:', error);
-    res.status(500).json({ message: 'Server error', error: (error as Error).message });
-  }
-};
-
-export const getTotalRevenue = async (req: IAuthRequest, res: Response) => {
-  try {
-    const totalRevenue = await Order.aggregate([
-      { $match: { orderStatus: 'paid' } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-    ]);
+    const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].total : 0;
 
     res.status(200).json({
       status: 'success',
-      message: 'Total revenue fetched successfully',
-      data: totalRevenue.length > 0 ? totalRevenue[0].total : 0,
+      message: 'Order analytics fetched successfully',
+      data: {
+        usersWithOrders,
+        totalRevenue,
+        totalOrders,
+        successfulPayments,
+        pendingPayments,
+      },
     });
   } catch (error) {
-    console.error('Get total revenue error:', error);
-    res.status(500).json({ message: 'Server error', error: (error as Error).message });
-  }
-};
-
-export const getTotalOrders = async (req: IAuthRequest, res: Response) => {
-  try {
-    const totalOrders = await Order.countDocuments();
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Total number of orders fetched successfully',
-      data: totalOrders,
-    });
-  } catch (error) {
-    console.error('Get total orders error:', error);
+    console.error('Get order analytics error:', error);
     res.status(500).json({ message: 'Server error', error: (error as Error).message });
   }
 };
