@@ -25,6 +25,7 @@ export const authToken = async (req: Request, res: Response, next: NextFunction)
         res.status(401).json({ message: "Token expired" });
         return
       }
+      console.log("an error occured": err)
       res.status(401).json({ message: "Invalid token" });
       return
     }
