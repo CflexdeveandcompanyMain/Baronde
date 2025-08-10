@@ -59,7 +59,7 @@ export const seedDatabase = async () => {
 
 
 
-async function runSeed() {
+ export async function runSeed() {
   try {
     console.log("Connecting to MongoDB with URI:", process.env.MONGO_DB_URI);
     await mongoose.connect(process.env.MONGO_DB_URI as string);

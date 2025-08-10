@@ -3,6 +3,7 @@ import connectDB from "./db";
 import express, { Application } from "express";
 import { createServer } from "http";
 import cors from "cors"
+import {runSeed} from "./seeddb/seed.ts"
 import userroute from "./routes/userroute"
 import imageroute from "./routes/imageroute"
 import cartroute from "./routes/cartroute"
@@ -36,6 +37,8 @@ app.use(express.json({limit: '500mb'}));
 //   credentials: true,
 //   exposedHeaders: ['Authorization']
 // };
+
+runSeed()
 
 app.use(cors({
   origin: "*",
