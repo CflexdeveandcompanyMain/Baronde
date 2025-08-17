@@ -27,7 +27,7 @@ const ERROR_MESSAGES = {
 };
 
 
-const generateToken = (userId: string): string => {
+export const generateToken = (userId: string): string => {
   const secretKey = process.env.SECRET_KEY as string;
   return sign({ id: userId }, secretKey, { expiresIn: "1d" });
 };
