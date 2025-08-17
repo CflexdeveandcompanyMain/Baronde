@@ -26,6 +26,7 @@ export interface IOrder extends Document {
   };
   orderStatus: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   paymentDetails?: IPaymentDetails; 
+  paymentIntentId?: string; // New field for Paystack transaction reference
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +55,13 @@ const OrderSchema = new Schema<IOrder>({
     status: { type: String },
     gatewayResponse: { type: String },
   },
+  paymentIntentId: { type: String, unique: true, sparse: true }, // Add this line
 }, { timestamps: true });
+
+// Create a TTL index for pending orders to expire after 10 minutes (600 seconds)
+OrderSchema.index(
+  { "createdAt": 1 },
+  { expireAfterSeconds: 600, partialFilterExpression: { orderStatus: "pending" } }
+);
 
 export default model<IOrder>('Order', OrderSchema);

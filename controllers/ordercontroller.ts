@@ -81,6 +81,7 @@ export const initiateCheckout = async (req: IAuthRequest, res: Response) => {
     });
 
     order.paymentDetails = { reference: response.data.data.reference };
+    order.paymentIntentId = response.data.data.reference; // Store the Paystack reference as paymentIntentId
     await order.save();
 
     res.status(200).json({
@@ -119,39 +120,55 @@ export const verifyPayment = async (req: IAuthRequest, res: Response) => {
 
     const { status, data } = response.data;
 
+    // find the order using the paymentIntentId 
+    const order = await Order.findOne({ paymentIntentId: reference });
+
+    if (!order) {
+      // could happen if the order was abandoned and expired due to TTL, or a malicious attempt
+      console.warn(`Order with paymentIntentId ${reference} not found during verification.`);
+      res.redirect(FRONTEND_FAILED_URL + `?error=order_not_found_or_expired`);
+      return;
+    }
+
     if (status && data.status === 'success') {
-      const orderId = data.metadata.orderId;
-      const order = await Order.findById(orderId);
-
-      if (order) {
-        if (order.orderStatus === 'paid') {
-          res.redirect(FRONTEND_SUCCESS_URL + `?orderId=${orderId}&message=already_paid`);
-          return
-        }
-
-        if (order.totalAmount * 100 !== data.amount) {
-          res.redirect(FRONTEND_FAILED_URL + `?error=amount_mismatch`);
-          return
-        }
-
-        order.orderStatus = 'paid';
-        order.paymentDetails = {
-          reference: data.reference,
-          status: data.status,
-          gatewayResponse: data.gateway_response,
-        };
-        await order.save();
-
-        await Cart.findOneAndDelete({ user: order.user });
-
-        const token = generateToken(order.user.toString());
-        res.redirect(`${FRONTEND_SUCCESS_URL}?orderId=${orderId}&token=${token}`);
-        return
-      } else {
-        res.redirect(FRONTEND_FAILED_URL + `?error=order_not_found`);
-        return
+      //  If order is already paid, redirect to success
+      if (order.orderStatus === 'paid') {
+        res.redirect(FRONTEND_SUCCESS_URL + `?orderId=${order._id.toString()}&message=already_paid`);
+        return;
       }
+
+      // Amount mismatch check
+      if (order.totalAmount * 100 !== data.amount) {
+        console.error(`Amount mismatch for order ${order._id}. Expected ${order.totalAmount * 100}, got ${data.amount}`);
+        order.orderStatus = 'cancelled';
+        await order.save();
+        res.redirect(FRONTEND_FAILED_URL + `?error=amount_mismatch`);
+        return;
+      }
+
+
+      order.orderStatus = 'paid';
+      order.paymentDetails = {
+        reference: data.reference,
+        status: data.status,
+        gatewayResponse: data.gateway_response,
+      };
+      await order.save();
+
+
+      await Cart.findOneAndDelete({ user: order.user });
+
+      const token = generateToken(order.user.toString());
+      res.redirect(`${FRONTEND_SUCCESS_URL}?orderId=${order._id.toString()}&token=${token}`);
+      return;
     } else {
+      order.orderStatus = 'cancelled';
+      order.paymentDetails = {
+        reference: data.reference,
+        status: data.status,
+        gatewayResponse: data.gateway_response,
+      };
+      await order.save();
       return res.redirect(FRONTEND_FAILED_URL + `?error=payment_failed`);
     }
   } catch (error: any) {
