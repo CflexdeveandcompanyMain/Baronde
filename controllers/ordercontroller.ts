@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import axios from 'axios';
+import { Types } from 'mongoose';
 import Cart from '../model/cart';
 import Order from '../model/order';
 import { IAuthRequest, IPopulatedProduct } from '../interface/types';
@@ -38,7 +39,7 @@ export const initiateCheckout = async (req: IAuthRequest, res: Response) => {
       }
       totalAmount += product.price * item.quantity;
       return {
-        product: product._id,
+        product: new Types.ObjectId(product._id),
         quantity: item.quantity,
         price: product.price,
       };
