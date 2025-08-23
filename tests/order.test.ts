@@ -54,7 +54,7 @@ describe('Order Controller', () => {
 
       const response = await request(app)
         .post('/order/v1/checkout')
-        .send({ shippingAddress: { street: '123 Test St', city: 'Test City', zipCode: '12345', country: 'Testland' } });
+        .send({ shippingAddress: { street: '123 Test St', city: 'Test City', zipCode: '12345', country: 'Testland' }, phoneNumber: '1234567890' });
 
       expect(response.status).toBe(200);
       expect(response.body.data.authorization_url).toBe('https://paystack.com/pay/test-auth-url');
@@ -68,7 +68,7 @@ describe('Order Controller', () => {
   
         const response = await request(app)
           .post('/order/v1/checkout')
-          .send({ shippingAddress: { street: '123 Test St', city: 'Test City', zipCode: '12345', country: 'Testland' } });
+          .send({ shippingAddress: { street: '123 Test St', city: 'Test City', zipCode: '12345', country: 'Testland' }, phoneNumber: '1234567890' });
   
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Cart is empty.');

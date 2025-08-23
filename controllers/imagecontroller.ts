@@ -4,20 +4,20 @@ import cloudinary from '../utils/cloudinary';
 
 export const uploadImage = async (req: Request, res: Response) => {
   try {
-    const { name, brand, specs, description, price, categories, keyword, image } = req.body;
+    const { name, brand, specs, description, price, categories, keyword, image, discount } = req.body;
 
-        if (!image || (Array.isArray(image) && image.length === 0) || !name || !description || !price || !categories) {
+    if (!image || (Array.isArray(image) && image.length === 0) || !name || !description || !price || !categories) {
       res.status(400).json({
         message: 'Input compulsory fields: at least one image, name, description, price and categories'
       });
-       return
+      return
     }
 
     const images = Array.isArray(image) ? image : [image];
 
     if (images.length > 4) {
-       res.status(400).json({ 
-        message: 'Maximum 4 images allowed per product' 
+      res.status(400).json({
+        message: 'Maximum 4 images allowed per product'
       });
       return
 
@@ -39,6 +39,7 @@ export const uploadImage = async (req: Request, res: Response) => {
       description: description,
       categories: categories,
       price: price,
+      discount: discount,
       keyword: Array.isArray(keyword) ? keyword : [keyword]
     });
 
@@ -51,9 +52,9 @@ export const uploadImage = async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ 
-      message: 'Server error', 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    res.status(500).json({
+      message: 'Server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };
@@ -79,15 +80,15 @@ export const getImages = async (req: Request, res: Response) => {
 export const getImagesByName = async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
-    
-    const findImage = await Image.find({ 
-      name: { $regex: name, $options: 'i' } 
+
+    const findImage = await Image.find({
+      name: { $regex: name, $options: 'i' }
     });
-    
+
     if (!findImage || findImage.length === 0) {
-      res.status(404).json({ 
+      res.status(404).json({
         status: 'error',
-        message: 'No images found with that name' 
+        message: 'No images found with that name'
       });
       return;
     }
@@ -100,9 +101,9 @@ export const getImagesByName = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Search error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'An error occurred while searching',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -111,7 +112,7 @@ export const getCategories = async (req: Request, res: Response) => {
   try {
     const { categories } = req.params;
     const data = await Image.find({ categories });
-    
+
     if (!data || data.length === 0) {
       res.status(404).json({
         status: "Not found",
@@ -124,7 +125,7 @@ export const getCategories = async (req: Request, res: Response) => {
       status: "success",
       message: "Fetched results successfully",
       count: data.length,
-      data: data 
+      data: data
     });
   } catch (error) {
     console.error(error);
@@ -136,7 +137,7 @@ export const getImageById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const image = await Image.findById(id);
-    
+
     if (!image) {
       res.status(404).json({
         status: 'error',
@@ -152,9 +153,9 @@ export const getImageById = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Get image error:', error);
-    res.status(500).json({ 
-      message: 'Server error', 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    res.status(500).json({
+      message: 'Server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };
@@ -193,10 +194,10 @@ export const deleteImage = async (req: Request, res: Response) => {
 
     // Delete image from cloudinary
     const publicIds = image.images.map(img => img.public_id);
-    if(publicIds.length > 0){
+    if (publicIds.length > 0) {
       await cloudinary.api.delete_resources(publicIds);
     }
-    
+
     await Image.findByIdAndDelete(id);
 
     res.status(200).json({
@@ -220,8 +221,8 @@ export const updateImage = async (req: Request, res: Response) => {
     let imageToUpdate = await Image.findById(id);
 
     if (!imageToUpdate) {
-       res.status(404).json({ message: 'Image not found' });
-       return
+      res.status(404).json({ message: 'Image not found' });
+      return
     }
 
     if (image && Array.isArray(image) && image.length > 0) {
@@ -244,7 +245,7 @@ export const updateImage = async (req: Request, res: Response) => {
     if (specs) imageToUpdate.spec = specs;
     if (description) imageToUpdate.description = description;
     if (price) imageToUpdate.price = price;
-    if(discount) imageToUpdate.discount = discount;
+    if (discount) imageToUpdate.discount = discount;
     if (categories) imageToUpdate.categories = categories;
     if (keyword) imageToUpdate.keyword = Array.isArray(keyword) ? keyword : [keyword];
 
@@ -258,9 +259,9 @@ export const updateImage = async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('Update error:', error);
-    res.status(500).json({ 
-      message: 'Server error', 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    res.status(500).json({
+      message: 'Server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };

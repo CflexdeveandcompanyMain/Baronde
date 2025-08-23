@@ -17,10 +17,10 @@ export const initiateCheckout = async (req: IAuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const userEmail = req.user?.email;
-    const { shippingAddress } = req.body;
+    const { shippingAddress, phoneNumber } = req.body;
 
-    if (!shippingAddress) {
-      res.status(400).json({ message: 'Shipping address is required.' });
+    if (!shippingAddress || !phoneNumber) {
+      res.status(400).json({ message: 'Shipping address and phone number are required.' });
       return
     }
 
@@ -51,12 +51,14 @@ export const initiateCheckout = async (req: IAuthRequest, res: Response) => {
       order.items = orderItems;
       order.totalAmount = totalAmount;
       order.shippingAddress = shippingAddress;
+      order.phoneNumber = phoneNumber;
     } else {
       order = new Order({
         user: userId,
         items: orderItems,
         totalAmount: totalAmount,
         shippingAddress: shippingAddress,
+        phoneNumber: phoneNumber,
         orderStatus: 'pending',
       });
     }

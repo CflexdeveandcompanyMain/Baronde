@@ -24,6 +24,7 @@ export interface IOrder extends Document {
     zipCode: string;
     country: string;
   };
+  phoneNumber: string;
   orderStatus: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   paymentDetails?: IPaymentDetails; 
   paymentIntentId?: string; // New field for Paystack transaction reference
@@ -45,6 +46,7 @@ const OrderSchema = new Schema<IOrder>({
     zipCode: { type: String, required: true },
     country: { type: String, required: true },
   },
+  phoneNumber: { type: String, required: true },
   orderStatus: {
     type: String,
     enum: ['pending', 'paid', 'shipped', 'delivered', 'cancelled'],
