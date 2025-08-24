@@ -245,7 +245,7 @@ export const updateImage = async (req: Request, res: Response) => {
     if (specs) imageToUpdate.spec = specs;
     if (description) imageToUpdate.description = description;
     if (price) imageToUpdate.price = price;
-    if (discount) imageToUpdate.discount = discount;
+    if ('discount' in req.body) imageToUpdate.discount = discount;
     if (categories) imageToUpdate.categories = categories;
     if (keyword) imageToUpdate.keyword = Array.isArray(keyword) ? keyword : [keyword];
 
