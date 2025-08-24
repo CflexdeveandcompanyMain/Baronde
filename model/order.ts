@@ -25,8 +25,9 @@ export interface IOrder extends Document {
     country: string;
   };
   phoneNumber: string;
-  orderStatus: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
-  paymentDetails?: IPaymentDetails; 
+  deliveryDate: Date;
+  orderStatus: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'processing';
+  paymentDetails?: IPaymentDetails;
   paymentIntentId?: string; // New field for Paystack transaction reference
   createdAt: Date;
   updatedAt: Date;
@@ -47,9 +48,13 @@ const OrderSchema = new Schema<IOrder>({
     country: { type: String, required: true },
   },
   phoneNumber: { type: String, required: true },
+  deliveryDate: {
+    type: Date,
+    default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  },
   orderStatus: {
     type: String,
-    enum: ['pending', 'paid', 'shipped', 'delivered', 'cancelled'],
+    enum: ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'processing'],
     default: 'pending',
   },
   paymentDetails: {

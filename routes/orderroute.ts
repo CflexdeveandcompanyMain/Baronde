@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { initiateCheckout, getOrders, getOrderById, updateOrderStatus, verifyPayment } from '../controllers/ordercontroller';
+import { initiateCheckout, getOrders, getOrderById, updateOrder, verifyPayment } from '../controllers/ordercontroller';
 import { authToken } from '../middleware/authtoken';
 import { Admin } from '../middleware/rbac';
 
@@ -71,6 +71,6 @@ router.get('/:id', authToken, getOrderById);
  *       200:
  *         description: Order status updated
  */
-router.put('/:id/status', authToken, Admin, updateOrderStatus);
+router.put('/:id', authToken, Admin, updateOrder);
 
 export default router;

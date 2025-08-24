@@ -220,29 +220,41 @@ export const getOrderById = async (req: IAuthRequest, res: Response) => {
   }
 };
 
-export const updateOrderStatus = async (req: IAuthRequest, res: Response) => {
+export const updateOrder = async (req: IAuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { orderStatus } = req.body;
+    const { orderStatus, deliveryDate } = req.body;
 
-    if (!orderStatus) {
-      res.status(400).json({ message: 'Order status is required.' });
-      return
+    if (orderStatus && !['paid', 'shipped', 'delivered', 'processing'].includes(orderStatus)) {
+      res.status(400).json({ message: 'Invalid order status.' });
+      return;
+    }
+
+    if (deliveryDate && isNaN(new Date(deliveryDate).getTime())) {
+      res.status(400).json({ message: 'Invalid delivery date.' });
+      return;
     }
 
     const order = await Order.findById(id);
 
     if (!order) {
       res.status(404).json({ message: 'Order not found.' });
-      return
+      return;
     }
 
-    order.orderStatus = orderStatus;
+    if (orderStatus) {
+      order.orderStatus = orderStatus;
+    }
+
+    if (deliveryDate) {
+      order.deliveryDate = new Date(deliveryDate);
+    }
+
     await order.save();
 
-    res.status(200).json({ status: 'success', message: 'Order status updated successfully', data: order });
+    res.status(200).json({ status: 'success', message: 'Order updated successfully', data: order });
   } catch (error) {
-    console.error('Update order status error:', error);
+    console.error('Update order error:', error);
     res.status(500).json({ message: 'Server error', error: (error as Error).message });
   }
 };
