@@ -31,13 +31,13 @@ export const initiateCheckout = async (req: IAuthRequest, res: Response) => {
       return
     }
 
-    let totalAmount = 0;
+    let subTotal = 0;
     const orderItems = cart.items.map(item => {
       const product = item.product;
       if (!product || typeof product.price !== 'number') {
         throw new Error(`Product with ID ${item.product} not found or has no price.`);
       }
-      totalAmount += product.price * item.quantity;
+      subTotal += product.price * item.quantity;
       return {
         product: new Types.ObjectId(product._id),
         quantity: item.quantity,
@@ -45,18 +45,29 @@ export const initiateCheckout = async (req: IAuthRequest, res: Response) => {
       };
     });
 
+    let tax = 0;
+    if (subTotal > 100000) {
+      tax = 2000;
+    } else {
+      tax = subTotal * 0.0015;
+    }
+
+    const totalAmount = subTotal + tax;
+
     let order = await Order.findOne({ user: userId, orderStatus: 'pending' });
 
     if (order) {
       order.items = orderItems;
-      order.totalAmount = totalAmount;
+      order.totalAmount = Math.round(totalAmount * 100) / 100;
+      order.tax = tax;
       order.shippingAddress = shippingAddress;
       order.phoneNumber = phoneNumber;
     } else {
       order = new Order({
         user: userId,
         items: orderItems,
-        totalAmount: totalAmount,
+        totalAmount: Math.round(totalAmount * 100) / 100,
+        tax: tax,
         shippingAddress: shippingAddress,
         phoneNumber: phoneNumber,
         orderStatus: 'pending',
@@ -67,7 +78,7 @@ export const initiateCheckout = async (req: IAuthRequest, res: Response) => {
 
     const paystackData = {
       email: userEmail,
-      amount: totalAmount * 100,
+      amount: Math.round(order.totalAmount * 100),
       callback_url: CALLBACK_URL,
       metadata: {
         orderId: order._id.toString(),
@@ -140,8 +151,9 @@ export const verifyPayment = async (req: IAuthRequest, res: Response) => {
       }
 
       // Amount mismatch check
-      if (order.totalAmount * 100 !== data.amount) {
-        console.error(`Amount mismatch for order ${order._id}. Expected ${order.totalAmount * 100}, got ${data.amount}`);
+      const expectedAmount = Math.round(order.totalAmount * 100);
+      if (expectedAmount !== data.amount) {
+        console.error(`Amount mismatch for order ${order._id}. Expected ${expectedAmount}, got ${data.amount}`);
         order.orderStatus = 'cancelled';
         await order.save();
         res.redirect(FRONTEND_FAILED_URL + `?error=amount_mismatch`);

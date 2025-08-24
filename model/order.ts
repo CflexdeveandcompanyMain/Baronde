@@ -18,6 +18,7 @@ export interface IOrder extends Document {
   user: Types.ObjectId;
   items: IOrderItem[];
   totalAmount: number;
+  tax: number;
   shippingAddress: {
     street: string;
     city: string;
@@ -41,6 +42,7 @@ const OrderSchema = new Schema<IOrder>({
     price: { type: Number, required: true },
   }],
   totalAmount: { type: Number, required: true },
+  tax: { type: Number, required: true, default: 0 },
   shippingAddress: {
     street: { type: String, required: true },
     city: { type: String, required: true },
