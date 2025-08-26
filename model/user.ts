@@ -67,9 +67,15 @@ const userschema = new Schema<userDoc>({
   timestamps: true,
 });
 
-userschema.index({ "otp.expiresAt": 1 }, { expireAfterSeconds: 0 });
+userschema.index(
+  { "createdAt": 1 },
+  {
+    expireAfterSeconds: 1800,
+    partialFilterExpression: { name: { $regex: /^Temp-/ } }
+  }
+);
 
-userschema.pre("save", async function(next) {
+userschema.pre("save", async function (next) {
   if (!this.isModified('password')) return next();
 
   try {
@@ -83,7 +89,7 @@ userschema.pre("save", async function(next) {
 
 
 
-userschema.methods.isLocked = function() {
+userschema.methods.isLocked = function () {
   return !!(this.lockUntil && this.lockUntil > Date.now());
 };
 
