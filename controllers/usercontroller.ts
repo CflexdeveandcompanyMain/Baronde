@@ -10,7 +10,7 @@ import crypto from "crypto";
 
 
 const CONSTANTS = {
-  OTP_EXPIRY_HOURS: 2,
+  OTP_EXPIRY_HOURS: 1,
   LOCKOUT_DURATION_MINUTES: 15,
   MAX_LOGIN_ATTEMPTS: 5,
 };
@@ -58,7 +58,7 @@ const createTempOTPHolder = async (name: string, email: string, otp: string) => 
       expiresAt: getOTPExpiryTime()
     }
   });
-  
+
   return await tempOtpHolder.save();
 };
 
@@ -126,7 +126,6 @@ const verifyAndCleanupOTP = async (otpId: string, otp: string) => {
     return false;
   }
 
- 
   await usermodel.findByIdAndDelete(otpId);
   return true;
 };
@@ -136,24 +135,24 @@ export const requestUserOTP = async (req: Request, res: Response) => {
   try {
     const { email, name } = req.body;
 
-    
+
     if (!email || !name) {
       res.status(400).json({ message: "Name and email are required" });
       return;
     }
 
-   
+
     const existingUser = await usermodel.findOne({ email });
     if (existingUser) {
       res.status(400).json({ message: ERROR_MESSAGES.EMAIL_IN_USE });
       return;
     }
 
-   
+
     const otp = generateOTP();
     const tempOtpHolder = await createTempOTPHolder(name, email, otp);
 
-    
+
     await sendOTPEmail(email, name, otp, "User Registration");
 
     res.status(200).json({
@@ -171,20 +170,20 @@ export const signUp = async (req: Request, res: Response) => {
   try {
     const { name, email, password, role = "user", otp, otpId } = req.body;
 
-    
+
     if (!name || !email || !password) {
       res.status(400).json({ message: "Name, email and password are required" });
       return;
     }
 
-    
+
     const existingUser = await usermodel.findOne({ email });
     if (existingUser) {
       res.status(400).json({ message: ERROR_MESSAGES.EMAIL_IN_USE });
       return;
     }
 
-   
+
     if (role === "user") {
       if (!otp || !otpId) {
         res.status(400).json({ message: "OTP and OTP ID are required for user registration" });
@@ -199,31 +198,27 @@ export const signUp = async (req: Request, res: Response) => {
       }
     }
 
-    
-
-    // Create new user
-    const user = new usermodel({ 
-      name, 
-      email, 
-      password, 
-      role 
+    const user = new usermodel({
+      name,
+      email,
+      password,
+      role
     });
     await user.save();
 
-    // Generate token
+
     const token = generateToken(user.id);
     res.setHeader("Authorization", `Bearer ${token}`);
 
-    // Send welcome email
     await sendWelcomeEmail(user.email, user.name);
 
     res.status(201).json({
       message: "Account created successfully",
-      user: { 
-        id: user.id, 
-        name: user.name, 
-        email: user.email, 
-        role: user.role 
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
       }
     });
   } catch (error) {
@@ -244,18 +239,15 @@ export const requestPasswordResetOTP = async (req: Request, res: Response) => {
       return;
     }
 
-    // Check if user exists
     const user = await usermodel.findOne({ email });
     if (!user) {
       res.status(400).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
       return;
     }
 
-    // Generate OTP and create temp holder
     const otp = generateOTP();
     const tempOtpHolder = await createTempOTPHolder(user.name, email, otp);
 
-    // Send OTP email
     await sendOTPEmail(email, user.name, otp, "Password Reset");
 
     res.status(200).json({
@@ -275,31 +267,26 @@ export const resetPassword = async (req: Request, res: Response) => {
   try {
     const { email, otp, otpId, newPassword } = req.body;
 
-    // Validate required fields
     if (!email || !otp || !otpId || !newPassword) {
-      res.status(400).json({ 
-        message: "Email, OTP, OTP ID, and new password are required" 
+      res.status(400).json({
+        message: "Email, OTP, OTP ID, and new password are required"
       });
       return;
     }
 
-    // Check if user exists
     const user = await usermodel.findOne({ email }).select("+password");
     if (!user) {
       res.status(400).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
       return;
     }
 
-    
     const isOTPValid = await verifyAndCleanupOTP(otpId, otp);
     if (!isOTPValid) {
       res.status(400).json({ message: ERROR_MESSAGES.INVALID_OTP });
       return;
     }
 
-    
-  
-    await user.updateOne({ password: newPassword});
+    await user.updateOne({ password: newPassword });
 
     res.status(200).json({
       message: "Password updated successfully"
@@ -315,31 +302,31 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-   
+
     if (!email || !password) {
       res.status(400).json({ message: "Email and password are required" });
       return;
     }
 
-  
+
     const user = await usermodel.findOne({ email }).select("+password");
     if (!user) {
       res.status(400).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
       return;
     }
 
-    
+
     if (user.lockUntil && user.lockUntil > new Date()) {
       const remainingTime = Math.ceil((user.lockUntil.getTime() - Date.now()) / 1000);
       const minutes = Math.floor(remainingTime / 60);
       const seconds = remainingTime % 60;
-      res.status(423).json({ 
-        message: `Account locked. Try again in ${minutes}m ${seconds}s` 
+      res.status(423).json({
+        message: `Account locked. Try again in ${minutes}m ${seconds}s`
       });
       return;
     }
 
-    
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       user.loginAttempts++;
@@ -347,7 +334,7 @@ export const login = async (req: Request, res: Response) => {
         user.lockUntil = new Date(Date.now() + CONSTANTS.LOCKOUT_DURATION_MINUTES * 60 * 1000);
       }
       await user.save();
-      
+
       res.status(400).json({
         message: ERROR_MESSAGES.INVALID_CREDENTIALS
       });
@@ -364,11 +351,11 @@ export const login = async (req: Request, res: Response) => {
     res.status(200).json({
       status: "success",
       message: "Login successful",
-      user: { 
-        id: user.id, 
+      user: {
+        id: user.id,
         name: user.name,
-        email: user.email, 
-        role: user.role 
+        email: user.email,
+        role: user.role
       }
     });
   } catch (error) {
@@ -382,13 +369,13 @@ export const getUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    
+
     if (!id.match(/^[0-9a-fA-F]{24}$/)) {
       res.status(400).json({ message: ERROR_MESSAGES.INVALID_USER_ID });
       return;
     }
 
-    
+
     const user = await usermodel.findById(id);
     if (!user) {
       res.status(404).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
@@ -417,7 +404,7 @@ export const getUser = async (req: Request, res: Response) => {
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const users = await usermodel.find().select('-password -otp -loginAttempts -lockUntil');
-    
+
     res.status(200).json({
       status: "success",
       message: "All users retrieved successfully",

@@ -67,6 +67,7 @@ const userschema = new Schema<userDoc>({
   timestamps: true,
 });
 
+userschema.index({ "otp.expiresAt": 1 }, { expireAfterSeconds: 0 });
 
 userschema.pre("save", async function(next) {
   if (!this.isModified('password')) return next();

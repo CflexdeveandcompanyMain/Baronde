@@ -45,21 +45,13 @@ export const initiateCheckout = async (req: IAuthRequest, res: Response) => {
       };
     });
 
-    let tax = 0;
-    if (subTotal > 100000) {
-      tax = 2000;
-    } else {
-      tax = subTotal * 0.0015;
-    }
-
-    const totalAmount = subTotal + tax;
+    const totalAmount = subTotal;
 
     let order = await Order.findOne({ user: userId, orderStatus: 'pending' });
 
     if (order) {
       order.items = orderItems;
       order.totalAmount = Math.round(totalAmount * 100) / 100;
-      order.tax = tax;
       order.shippingAddress = shippingAddress;
       order.phoneNumber = phoneNumber;
     } else {
@@ -67,7 +59,6 @@ export const initiateCheckout = async (req: IAuthRequest, res: Response) => {
         user: userId,
         items: orderItems,
         totalAmount: Math.round(totalAmount * 100) / 100,
-        tax: tax,
         shippingAddress: shippingAddress,
         phoneNumber: phoneNumber,
         orderStatus: 'pending',
