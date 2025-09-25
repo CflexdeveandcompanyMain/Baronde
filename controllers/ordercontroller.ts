@@ -32,10 +32,10 @@ export const initiateCheckout = async (req: IAuthRequest, res: Response) => {
     }
 
     let subTotal = 0;
-    const orderItems = cart.items.map(item => {
+    const orderItems = cart.items.map(item: any => {
       const product = item.product;
-      if (!product || typeof product.price !== 'number') {
-        throw new Error(`Product with ID ${item.product} not found or has no price.`);
+      if (!product || typeof product.price !== 'number' || !product._id) {
+        throw new Error(`Invalid product data for product ID: ${item.product}`);
       }
       subTotal += product.price * item.quantity;
       return {

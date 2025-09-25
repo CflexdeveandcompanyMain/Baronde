@@ -9,12 +9,13 @@ import cartroute from "./routes/cartroute"
 import orderroute from "./routes/orderroute"
 import healthroute from "./routes/healthroute"
 import orderanalyticroute from "./routes/orderanalyticroute"
+import testimonialroute from "./routes/testimonialroute"
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './utils/swagger';
 const PORT = process.env.PORT || 3000;
 const app: Application = express();
 const httpServer = createServer(app);
-app.use(express.json({limit: '500mb'}));
+app.use(express.json({ limit: '500mb' }));
 
 
 // const whitelist = [
@@ -22,7 +23,7 @@ app.use(express.json({limit: '500mb'}));
 //   'http://localhost:3001',
 //   'http://localhost:5173',
 //   "*"
-  
+
 // ];
 
 // const corsOptions = {
@@ -54,6 +55,7 @@ app.use('/cart/v1', cartroute);
 app.use('/order/v1', orderroute);
 app.use('/health', healthroute);
 app.use('/order-analytics', orderanalyticroute);
+app.use('/testimonial/v1', testimonialroute);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
@@ -65,7 +67,7 @@ connectDB()
     });
   })
   .catch(error => {
-    
+
 
     console.error('Failed to connect to database:', error);
     process.exit(1);
