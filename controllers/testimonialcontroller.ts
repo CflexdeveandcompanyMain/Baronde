@@ -18,7 +18,7 @@ export const createTestimonial = async (req: Request, res: Response) => {
           resolve(result);
         }
       );
-      uploadStream.end(req.file.buffer);
+      req.file && uploadStream.end(req.file.buffer);
     });
 
     const newTestimonial: ITestimonial = new Testimonial({
@@ -72,7 +72,7 @@ export const updateTestimonial = async (req: Request, res: Response) => {
             resolve(result);
           }
         );
-        uploadStream.end(req.file.buffer);
+        req.file && uploadStream.end(req.file.buffer);
       });
       image = result.secure_url;
     }
