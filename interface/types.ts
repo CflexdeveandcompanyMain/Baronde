@@ -17,3 +17,8 @@ export interface IPopulatedProduct {
   name: string;
   price: number;
 }
+
+
+export interface ITest {
+  _id: string;
+}
